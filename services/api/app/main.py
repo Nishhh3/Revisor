@@ -8,10 +8,11 @@ from app.core.lifespan import lifespan
 from app.core.logging import setup_logging
 import app.database.models
 
-import app.auth.model
+# import app.auth.model
 
-import app.repositories.model
-import app.pull_requests.model
+# import app.repositories.model
+# import app.pull_requests.model
+# import app.pull_request_files.model
 
 
 setup_logging()
