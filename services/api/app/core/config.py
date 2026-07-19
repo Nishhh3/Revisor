@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:3000"
 
+    database_url: str
+
     secret_key: str
     access_token_expire_minutes: int = 30
 
