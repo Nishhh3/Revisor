@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.database.base import Base
 from app.auth.model import User
 from app.repositories.model import Repository
+from app.pull_requests.model import PullRequest
 
 # Import models here as they are created
 # Example:

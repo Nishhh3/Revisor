@@ -11,6 +11,7 @@ import app.database.models
 import app.auth.model
 
 import app.repositories.model
+import app.pull_requests.model
 
 
 setup_logging()
