@@ -6,6 +6,7 @@ from alembic import context
 from app.core.config import settings
 from app.database.base import Base
 from app.auth.model import User
+from app.repositories.model import Repository
 
 # Import models here as they are created
 # Example:

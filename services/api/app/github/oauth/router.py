@@ -51,6 +51,7 @@ async def github_callback(
     db: Session = Depends(get_db),
 ):
     token = await oauth_service.exchange_code_for_token(code)
+    # print(token)
 
     github_user = await oauth_service.get_github_user(
         token["access_token"]
@@ -60,7 +61,10 @@ async def github_callback(
 
     service = UserService(repository)
 
-    user = service.get_or_create_user(github_user)
+    user = service.get_or_create_user(
+    github_user,
+    token,
+    )
 
     jwt_service = JWTService()
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from uuid import UUID
 
@@ -10,9 +12,12 @@ from sqlalchemy.orm import mapped_column
 from app.database.base import Base
 from app.database.mixins import TimestampMixin
 from app.database.mixins import UUIDMixin
+from sqlalchemy.orm import relationship
+from sqlalchemy import Text
 
 
 class User(UUIDMixin, TimestampMixin, Base):
+    
     """
     GitHub authenticated PRISM user.
     """
@@ -55,4 +60,28 @@ class User(UUIDMixin, TimestampMixin, Base):
     last_login: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from app.repositories.model import Repository
+
+    repositories: Mapped[list["Repository"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    github_access_token: Mapped[str] = mapped_column(
+    Text,
+    nullable=True,
+    )
+
+    github_token_type: Mapped[str] = mapped_column(
+        String(50),
+        default="bearer",
+        nullable=True,
+    )
+
+    github_scope: Mapped[str | None] = mapped_column(
+    Text,
+    nullable=True,
     )
