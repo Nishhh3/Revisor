@@ -17,6 +17,9 @@ class Settings(BaseSettings):
 
     database_url: str
 
+    github_client_id: str
+    github_client_secret: str
+
     secret_key: str
     access_token_expire_minutes: int = 30
 
