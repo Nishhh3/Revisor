@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from sqlalchemy.orm import relationship
 
 from sqlalchemy import Boolean
 from sqlalchemy import DateTime
@@ -106,4 +107,10 @@ class PullRequest(UUIDMixin, TimestampMixin, Base):
     repository = relationship(
         "Repository",
         back_populates="pull_requests",
+    )
+    
+    files = relationship(
+    "PullRequestFile",
+    back_populates="pull_request",
+    cascade="all, delete-orphan",
     )
