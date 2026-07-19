@@ -6,6 +6,12 @@ from app.api.router import router as api_router
 from app.core.config import settings
 from app.core.lifespan import lifespan
 from app.core.logging import setup_logging
+import app.database.models
+
+import app.auth.model
+
+import app.repositories.model
+
 
 setup_logging()
 
