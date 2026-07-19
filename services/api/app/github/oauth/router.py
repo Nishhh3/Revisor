@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 from app.auth.repositories.user_repository import UserRepository
 from app.auth.services.user_service import UserService
 from app.database.dependencies import get_db
-
+from app.auth.jwt.service import JWTService
+from app.auth.schemas.login import LoginResponse
 
 
 router = APIRouter(
@@ -39,7 +40,12 @@ async def github_login():
     return RedirectResponse(github_url)
 
 
-@router.get("/callback")
+@router.get(
+    "/callback",
+    response_model=LoginResponse,
+    summary="GitHub OAuth Callback",
+    description="Authenticates a GitHub user and returns a JWT.",
+)
 async def github_callback(
     code: str = Query(...),
     db: Session = Depends(get_db),
@@ -56,8 +62,16 @@ async def github_callback(
 
     user = service.get_or_create_user(github_user)
 
+    jwt_service = JWTService()
+
+    access_token = jwt_service.create_access_token(
+    str(user.id)
+    )
+
     return {
         "message": "Login successful",
+        "access_token": access_token,
+        "token_type": "Bearer",
         "user": {
             "id": str(user.id),
             "github_id": user.github_id,
