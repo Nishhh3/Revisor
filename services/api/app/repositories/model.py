@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime
 
 from sqlalchemy import BigInteger
 from sqlalchemy import Boolean
@@ -9,6 +10,8 @@ from sqlalchemy import Text
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
+from sqlalchemy import Integer
+from sqlalchemy import DateTime
 
 from app.database.base import Base
 from app.database.mixins import TimestampMixin
@@ -67,6 +70,56 @@ class Repository(UUIDMixin, TimestampMixin, Base):
         nullable=False,
     )
 
+    language: Mapped[str | None] = mapped_column(
+    String(100),
+    nullable=True,
+    )
+
+    stargazers_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+    )
+
+    forks_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+    )
+
+    watchers_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+    )
+
+    open_issues_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+    )
+
+    size: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+    )
+
+    visibility: Mapped[str] = mapped_column(
+        String(20),
+        default="public",
+    )
+
+    created_at_github: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    updated_at_github: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    pushed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     owner_id: Mapped[str] = mapped_column(
         ForeignKey("users.id"),
         nullable=False,
@@ -80,3 +133,9 @@ class Repository(UUIDMixin, TimestampMixin, Base):
     user: Mapped["User"] = relationship(
         back_populates="repositories",
     )
+
+    pull_requests = relationship(
+    "PullRequest",
+    back_populates="repository",
+    cascade="all, delete-orphan",
+)
