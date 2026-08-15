@@ -24,6 +24,7 @@ class PRContext:
     title: str = ""
     body: str = ""
     diff: str = ""
+    pr_author: str = "" 
     changed_files: list[str] = field(default_factory=list)
     comments: list[str] = field(default_factory=list)
 

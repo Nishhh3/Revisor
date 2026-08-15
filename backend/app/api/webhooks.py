@@ -8,8 +8,8 @@ from app.config import settings
 from app.ingestion.pr_fetcher import fetch_pr_context
 
 from app.agents.logic_performance_agent import review_logic_performance
-
 from app.output.pr_commenter import post_findings_comment
+from app.models.review_store import save_review
 
 logger = logging.getLogger("prism.webhooks")
 router = APIRouter()
@@ -69,6 +69,11 @@ async def github_webhook(
         findings = review_logic_performance(pr_context)
         for f in findings:
             logger.info("Finding: [%s] %s -- %s", f.get("severity"), f.get("file"), f.get("issue"))
+
+        review_id = save_review(
+            repo_full_name, pr_number, pr_context.title, pr_context.pr_author, findings
+        )
+        logger.info("Saved review %s to database", review_id)
 
         post_findings_comment(repo_full_name, pr_number, findings)
 
