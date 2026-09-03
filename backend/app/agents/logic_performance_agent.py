@@ -52,7 +52,7 @@ Diff:
     raw_text = ""
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             max_tokens=1000,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
