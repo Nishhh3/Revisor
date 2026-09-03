@@ -53,7 +53,7 @@ Diff:
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-20b",
-            max_tokens=1000,
+            max_tokens=4096,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
