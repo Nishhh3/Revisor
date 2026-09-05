@@ -5,7 +5,7 @@ from groq import Groq
 
 from app.config import settings
 from app.ingestion.pr_fetcher import PRContext
-
+from app.rag.retriever import retrieve_context
 logger = logging.getLogger("prism.agents.logic_performance")
 
 client = Groq(api_key=settings.groq_api_key)
@@ -37,23 +37,18 @@ If there are no findings, return {"findings": []}.
 
 
 def review_logic_performance(pr_context: PRContext) -> list[dict]:
-    """
-    Review a PR diff for logic correctness and performance issues.
-
-    Returns a list of finding dictionaries. Failures are logged and
-    return an empty list so the webhook pipeline does not crash.
-    """
-
-    from app.rag.retriever import retrieve_context
-
     raw_text = ""
+    context_block = "No additional repository context retrieved."
 
     try:
-        # Retrieve relevant repository context
         retrieved = retrieve_context(pr_context.repo_full_name, pr_context.diff[:500], top_k=3)
-        context_block = "\n\n".join(f"--- {r['file_path']} ---\n{r['text']}" for r in retrieved) or "No additional repository context retrieved."
+        if retrieved:
+            context_block = "\n\n".join(f"--- {r['file_path']} ---\n{r['text']}" for r in retrieved)
         logger.info("RAG retrieved %d chunk(s): %s", len(retrieved), [r['file_path'] for r in retrieved])
-        
+    except Exception:
+        logger.exception("RAG retrieval failed -- continuing without repository context")
+
+    try:
         user_prompt = f"""PR Title: {pr_context.title}
 Repo: {pr_context.repo_full_name}
 
@@ -63,7 +58,6 @@ Diff:
 Related repository context (for reference only, not part of this PR's changes):
 {context_block}
 """
-
         response = client.chat.completions.create(
             model="openai/gpt-oss-20b",
             max_tokens=4096,
@@ -72,26 +66,15 @@ Related repository context (for reference only, not part of this PR's changes):
                 {"role": "user", "content": user_prompt},
             ],
         )
-
         raw_text = response.choices[0].message.content or ""
-
         parsed = json.loads(raw_text)
         findings = parsed.get("findings", [])
-
-        logger.info(
-            "Logic/performance agent returned %d finding(s)",
-            len(findings),
-        )
-
+        logger.info("Logic/performance agent returned %d finding(s)", len(findings))
         return findings
 
     except json.JSONDecodeError:
-        logger.error(
-            "Agent response wasn't valid JSON: %s",
-            raw_text[:200],
-        )
+        logger.error("Agent response wasn't valid JSON: %s", raw_text[:200])
         return []
-
     except Exception:
         logger.exception("Logic/performance agent call failed")
         return []

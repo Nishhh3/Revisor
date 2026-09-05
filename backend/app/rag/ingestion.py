@@ -78,6 +78,11 @@ def ingest_repository(repo_full_name: str) -> int:
             vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE),
         )
 
+    client.create_payload_index(
+    collection_name=settings.qdrant_collection,
+    field_name="repo",
+    field_schema=models.PayloadSchemaType.KEYWORD,
+    )
     contents = repo.get_contents("")
     files_to_index = []
     while contents:
