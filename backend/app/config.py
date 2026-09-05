@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://redis:6379/2"
 
     qdrant_url: str = "http://qdrant:6333"
+    qdrant_api_key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwic3ViamVjdCI6ImFwaS1rZXk6MGE5YTY0NWUtMmUzMy00NThlLTk0OTUtYzU5Y2I4OGRiMmJkIn0.cNklC95ncGn_2IvBQpmzsPj3OVUxQ48LZrouuOdVq7E"
     qdrant_collection: str = "prism_repo_index"
 
     github_webhook_secret: str = ""
