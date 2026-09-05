@@ -1,12 +1,3 @@
-"""
-Logic + Performance Agent -- step 3 in the build order.
-
-Takes a PRContext (diff + metadata) and asks the LLM to reason about
-correctness and performance issues in the changed code. Returns
-structured findings the moderator agent can later merge with
-security/standards findings.
-"""
-
 import json
 import logging
 
@@ -24,33 +15,55 @@ SYSTEM_PROMPT = """You are a code review agent focused on two things only:
 2. Performance -- inefficient loops, unnecessary queries, obvious complexity issues
 
 You are reviewing a single PR's diff. Only comment on lines actually changed
-in the diff. If you find nothing significant, say so -- don't invent issues.
+in the diff. Use the related repository context only to better understand the
+changed code; do not report issues on unchanged context alone.
+
+If you find nothing significant, say so -- don't invent issues.
 
 Respond ONLY with valid JSON, no markdown fences, no preamble, in this exact shape:
 {
   "findings": [
-    {"severity": "high|medium|low", "file": "...", "issue": "...", "recommendation": "..."}
+    {
+      "severity": "high|medium|low",
+      "file": "...",
+      "issue": "...",
+      "recommendation": "..."
+    }
   ]
 }
+
 If there are no findings, return {"findings": []}.
 """
 
 
 def review_logic_performance(pr_context: PRContext) -> list[dict]:
     """
-    Send the PR diff to Groq's hosted LLM and get back structured
-    logic/performance findings. Returns a list of finding dicts (empty
-    list if none, or if the call fails -- we log the failure but don't
-    crash the webhook).
+    Review a PR diff for logic correctness and performance issues.
+
+    Returns a list of finding dictionaries. Failures are logged and
+    return an empty list so the webhook pipeline does not crash.
     """
-    user_prompt = f"""PR Title: {pr_context.title}
+
+    from app.rag.retriever import retrieve_context
+
+    raw_text = ""
+
+    try:
+        # Retrieve relevant repository context
+        retrieved = retrieve_context(pr_context.repo_full_name, pr_context.diff[:500], top_k=3)
+        context_block = "\n\n".join(f"--- {r['file_path']} ---\n{r['text']}" for r in retrieved) or "No additional repository context retrieved."
+        logger.info("RAG retrieved %d chunk(s): %s", len(retrieved), [r['file_path'] for r in retrieved])
+        
+        user_prompt = f"""PR Title: {pr_context.title}
 Repo: {pr_context.repo_full_name}
 
 Diff:
 {pr_context.diff}
+
+Related repository context (for reference only, not part of this PR's changes):
+{context_block}
 """
-    raw_text = ""
-    try:
+
         response = client.chat.completions.create(
             model="openai/gpt-oss-20b",
             max_tokens=4096,
@@ -59,15 +72,26 @@ Diff:
                 {"role": "user", "content": user_prompt},
             ],
         )
-        raw_text = response.choices[0].message.content
+
+        raw_text = response.choices[0].message.content or ""
+
         parsed = json.loads(raw_text)
         findings = parsed.get("findings", [])
-        logger.info("Logic/performance agent returned %d finding(s)", len(findings))
+
+        logger.info(
+            "Logic/performance agent returned %d finding(s)",
+            len(findings),
+        )
+
         return findings
 
     except json.JSONDecodeError:
-        logger.error("Agent response wasn't valid JSON: %s", raw_text[:200])
+        logger.error(
+            "Agent response wasn't valid JSON: %s",
+            raw_text[:200],
+        )
         return []
+
     except Exception:
         logger.exception("Logic/performance agent call failed")
         return []
