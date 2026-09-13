@@ -24,5 +24,15 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     google_api_key: str = ""
 
+    @field_validator("*", mode="before")
+    @classmethod
+    def strip_strings(cls, v):
+        """Defensive: a stray newline/whitespace in any credential
+        (copy-paste artifact) shouldn't silently corrupt every HTTP
+        call that uses it -- strip it once, here, for every field."""
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
 
 settings = Settings()
