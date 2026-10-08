@@ -67,6 +67,7 @@ def fetch_pr_context(repo_full_name: str, pr_number: int) -> PRContext:
         title=pr.title,
         body=pr.body or "",
         diff=diff_text,
+        pr_author=pr.user.login if pr.user else "",
         changed_files=changed_files,
         comments=comments,
     )
