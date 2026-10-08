@@ -86,7 +86,7 @@ Related repository context (for reference only, not part of this PR's changes):
         response = client.chat.completions.create(
             model="qwen/qwen3.8-27b",
             max_tokens=8192,
-            temparture=0,
+            temparature=0,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},

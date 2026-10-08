@@ -50,7 +50,7 @@ type Recent = {
 };
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}/api/dashboard/${path}`, { cache: "no-store" });
+  const res = await fetch(`${API}/api/analytics/${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`${path}: ${res.status}`);
   return res.json();
 }

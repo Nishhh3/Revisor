@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.webhooks import router as webhooks_router
 from app.api.dashboard import router as dashboard_router
 from app.config import settings
-
+from app.api.analytics import router as analytics_router
 
 logging.basicConfig(level=settings.log_level.upper())
 logger = logging.getLogger("prism")
@@ -27,6 +27,7 @@ app.add_middleware(
 app.include_router(webhooks_router, prefix="/webhooks", tags=["webhooks"])
 app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
 app.include_router(dashboard_router)
+app.include_router(analytics_router)
 
 @app.get("/health")
 def health_check():
