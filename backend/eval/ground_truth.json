@@ -1,0 +1,36 @@
+{
+  "case_01_order_processor.py": {
+    "description": "Order processing module with 4 planted issues plus one discovered discount-logic bug",
+    "expected_findings": [
+      {"severity": "high", "category": "mutable_default_argument", "description": "add_to_cart uses cart=[] as a default, shared across calls"},
+      {"severity": "medium", "category": "performance", "description": "get_unique_skus uses list membership check -- O(n^2)"},
+      {"severity": "medium", "category": "error_handling", "description": "submit_order catches a bare Exception, hiding real failures"},
+      {"severity": "low", "category": "correctness", "description": "calculate_total accumulates float rounding error for money math"}
+    ]
+  },
+  "case_02_buggy_basic.py": {
+    "description": "Two small, syntax-adjacent bugs",
+    "expected_findings": [
+      {"severity": "high", "category": "syntax_error", "description": "find_user uses = instead of == in the if condition"},
+      {"severity": "medium", "category": "correctness", "description": "get_average divides by len(scores) without checking for an empty list"}
+    ]
+  },
+  "case_03_clean_validator.py": {
+    "description": "Originally intended as a clean baseline; two real issues were discovered by the agent during eval and confirmed genuine. No longer used as the false-positive probe -- see case_05 for that role.",
+    "expected_findings": [
+      {"severity": "medium", "category": "correctness", "description": "validate_password raises TypeError on None or non-string input -- no type guard before len()/any() calls"},
+      {"severity": "low", "category": "correctness", "description": "EMAIL_PATTERN only allows one dot in the domain, incorrectly rejecting valid subdomains like user@mail.example.com"}
+    ]
+  },
+  "case_04_pagination_offby1.py": {
+    "description": "Off-by-one bug in pagination, plus a related floor-division undercount in total_pages",
+    "expected_findings": [
+      {"severity": "high", "category": "off_by_one", "description": "paginate treats page as 0-indexed in the caller's likely 1-indexed usage -- page=1 skips the first page_size items"},
+      {"severity": "medium", "category": "correctness", "description": "total_pages uses floor division, undercounting when item_count isn't an exact multiple of page_size"}
+    ]
+  },
+  "case_05_clean_math.py": {
+    "description": "New, more carefully verified clean baseline -- defensively written with explicit guards for the exact edge cases (empty input, division by zero) that tripped up case_03. Use this as the false-positive probe going forward.",
+    "expected_findings": []
+  }
+}

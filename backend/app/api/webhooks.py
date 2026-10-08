@@ -67,14 +67,16 @@ async def github_webhook(
         )
 
         findings = review_logic_performance(pr_context)
-        for f in findings:
-            logger.info("Finding: [%s] %s -- %s", f.get("severity"), f.get("file"), f.get("issue"))
 
-        review_id = save_review(
-            repo_full_name, pr_number, pr_context.title, pr_context.pr_author, findings
-        )
-        logger.info("Saved review %s to database", review_id)
+        if findings is None:
+            logger.error("Agent call failed -- skipping comment post, this is not a genuine clean review")
+        else:
+            for f in findings:
+                logger.info("Finding: [%s] %s -- %s", f.get("severity"), f.get("file"), f.get("issue"))
 
-        post_findings_comment(repo_full_name, pr_number, findings)
+            review_id = save_review(repo_full_name, pr_number, pr_context.title, pr_context.pr_author, findings)
+            logger.info("Saved review %s to database", review_id)
+
+            post_findings_comment(repo_full_name, pr_number, findings)
 
     return {"received": True}
