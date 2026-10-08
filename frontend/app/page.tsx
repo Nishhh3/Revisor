@@ -1,40 +1,72 @@
 import Link from "next/link";
-import { getReviews } from "../lib/api";
+import RepoFilter from "../components/RepoFilter";
+import { FindingsBadge, Notice } from "../components/ui";
+import { analytics, formatTime, type Recent, type Repo } from "../lib/analytics";
 
-export default async function HomePage() {
-  const reviews = await getReviews();
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ repo?: string }>;
+}) {
+  const { repo } = await searchParams;
+
+  let reviews: Recent[];
+  let repos: Repo[];
+  try {
+    [repos, reviews] = await Promise.all([
+      analytics<Repo[]>("repositories"),
+      analytics<Recent[]>("recent", repo, { limit: 100 }),
+    ]);
+  } catch (e) {
+    return (
+      <main className="mx-auto max-w-3xl p-8">
+        <Notice title="Couldn't load reviews">
+          The backend didn&apos;t respond correctly ({(e as Error).message}). If it was idle, wait a
+          minute and refresh.
+        </Notice>
+      </main>
+    );
+  }
 
   return (
-    <main className="max-w-3xl mx-auto p-8">
-      <h1 className="text-2xl font-semibold mb-6">PRISM Reviews</h1>
+    <main className="mx-auto max-w-3xl p-8">
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Pull request reviews</h1>
+          <p className="mt-1 text-sm text-muted">Latest review for each pull request.</p>
+        </div>
+        <RepoFilter repos={repos.map((r) => r.repository)} value={repo} />
+      </div>
 
       {reviews.length === 0 ? (
-        <p className="text-gray-500">No reviews yet.</p>
+        <Notice title="No reviews yet">
+          Open a pull request in a repository that sends webhooks to PRISM and its review will
+          show up here.
+        </Notice>
       ) : (
-        <div className="space-y-3">
-          {reviews.map((review) => (
-            <Link
-              key={review.id}
-              href={`/reviews/${review.id}`}
-              className="block border rounded-lg p-4 hover:bg-gray-50 transition"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-medium">{review.pr_title || "Untitled PR"}</p>
-                  <p className="text-sm text-gray-500">
-                    {review.repository} · PR #{review.pr_number}
-                  </p>
+        <ul className="space-y-3">
+          {reviews.map((r) => (
+            <li key={r.id}>
+              <Link
+                href={`/reviews/${r.id}`}
+                className="block rounded-md border border-border bg-surface p-4 transition-colors hover:border-accent"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{r.pr_title || "Untitled PR"}</p>
+                    <p className="text-sm text-muted">
+                      {r.repository}, PR #{r.pr_number}
+                    </p>
+                  </div>
+                  <FindingsBadge total={r.finding_count} high={r.high_count} />
                 </div>
-                <span className="text-sm bg-gray-100 rounded-full px-3 py-1">
-                  {review.finding_count} finding{review.finding_count !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 mt-2">
-                {new Date(review.created_at).toLocaleString()}
-              </p>
-            </Link>
+                <p className="mt-2 text-xs text-muted">
+                  <time dateTime={r.created_at}>{formatTime(r.created_at)}</time>
+                </p>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </main>
   );
