@@ -27,134 +27,243 @@
         "status": "ok",
         "findings": [
           {
+            "agent_type": "logic_performance",
             "severity": "high",
             "file": "case_01_order_processor.py",
-            "issue": "Mutable default argument `cart=[]` in `add_to_cart` is a classic Python bug, causing state to leak between function calls.",
-            "recommendation": "Change the signature to `def add_to_cart(item, cart=None):` and initialize `cart = []` if it is `None` inside the function."
+            "issue": "The function add_to_cart uses a mutable default argument (cart=[]), causing the same list to be shared across all calls and leading to unexpected cart contents.",
+            "recommendation": "Change the signature to def add_to_cart(item, cart=None): and inside the function set cart = [] if cart is None before appending."
           },
           {
+            "agent_type": "logic_performance",
             "severity": "medium",
             "file": "case_01_order_processor.py",
-            "issue": "`get_unique_skus` uses `list` objects (`seen` and `unique`) to deduplicate SKUs. Checking for membership in a list (e.g., `if item[\"sku\"] not in seen`) runs in O(n) time, making this function O(n^2) for a cart of size n.",
-            "recommendation": "Use a `set` for `seen` to achieve O(n) time complexity."
+            "issue": "get_unique_skus's docstring says it returns a list of distinct SKUs, but the implementation returns the full item dictionaries, violating the documented contract.",
+            "recommendation": "Return a list of SKU strings (e.g., unique.append(item[\"sku\"])) or update the docstring to reflect that the function returns the first occurrence of each item."
+          },
+          {
+            "agent_type": "logic_performance",
+            "severity": "low",
+            "file": "case_01_order_processor.py",
+            "issue": "get_unique_skus uses a list (seen) for membership checks, resulting in O(n²) time complexity for large carts.",
+            "recommendation": "Replace the list with a set for O(1) membership tests while preserving order using a separate list for the result (e.g., seen = set())."
+          },
+          {
+            "agent_type": "logic_performance",
+            "severity": "medium",
+            "file": "case_01_order_processor.py",
+            "issue": "submit_order catches a broad Exception, which masks underlying errors (e.g., key errors, validation failures) and makes debugging difficult.",
+            "recommendation": "Catch specific exceptions such as ValueError from charge_customer and any custom exceptions from calculate_total, allowing unexpected errors to propagate."
+          },
+          {
+            "agent_type": "logic_performance",
+            "severity": "low",
+            "file": "case_01_order_processor.py",
+            "issue": "calculate_total performs monetary calculations using float and round, which can introduce rounding errors in financial contexts.",
+            "recommendation": "Use the Decimal type for price, quantity, and total calculations, and round only when formatting for display."
           }
-        ]
+        ],
+        "finding_count": 5,
+        "duration_seconds": 5.63,
+        "metrics": {
+          "true_positives": 3,
+          "false_positives": 2,
+          "false_negatives": 1,
+          "precision": 0.6,
+          "recall": 0.75,
+          "f1": 0.6667,
+          "severity_agreement": 0.6667,
+          "matched_findings": [
+            {
+              "expected": {
+                "severity": "high",
+                "category": "mutable_default_argument",
+                "description": "add_to_cart uses cart=[] as a default, shared across calls"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "high",
+                "file": "case_01_order_processor.py",
+                "issue": "The function add_to_cart uses a mutable default argument (cart=[]), causing the same list to be shared across all calls and leading to unexpected cart contents.",
+                "recommendation": "Change the signature to def add_to_cart(item, cart=None): and inside the function set cart = [] if cart is None before appending."
+              },
+              "severity_match": true
+            },
+            {
+              "expected": {
+                "severity": "medium",
+                "category": "performance",
+                "description": "get_unique_skus uses list membership check -- O(n^2)"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "low",
+                "file": "case_01_order_processor.py",
+                "issue": "get_unique_skus uses a list (seen) for membership checks, resulting in O(n²) time complexity for large carts.",
+                "recommendation": "Replace the list with a set for O(1) membership tests while preserving order using a separate list for the result (e.g., seen = set())."
+              },
+              "severity_match": false
+            },
+            {
+              "expected": {
+                "severity": "low",
+                "category": "correctness",
+                "description": "calculate_total accumulates float rounding error for money math"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "low",
+                "file": "case_01_order_processor.py",
+                "issue": "calculate_total performs monetary calculations using float and round, which can introduce rounding errors in financial contexts.",
+                "recommendation": "Use the Decimal type for price, quantity, and total calculations, and round only when formatting for display."
+              },
+              "severity_match": true
+            }
+          ],
+          "missed_findings": [
+            {
+              "severity": "medium",
+              "category": "error_handling",
+              "description": "submit_order catches a bare Exception, hiding real failures"
+            }
+          ],
+          "extra_findings": [
+            {
+              "agent_type": "logic_performance",
+              "severity": "medium",
+              "file": "case_01_order_processor.py",
+              "issue": "get_unique_skus's docstring says it returns a list of distinct SKUs, but the implementation returns the full item dictionaries, violating the documented contract.",
+              "recommendation": "Return a list of SKU strings (e.g., unique.append(item[\"sku\"])) or update the docstring to reflect that the function returns the first occurrence of each item."
+            },
+            {
+              "agent_type": "logic_performance",
+              "severity": "medium",
+              "file": "case_01_order_processor.py",
+              "issue": "submit_order catches a broad Exception, which masks underlying errors (e.g., key errors, validation failures) and makes debugging difficult.",
+              "recommendation": "Catch specific exceptions such as ValueError from charge_customer and any custom exceptions from calculate_total, allowing unexpected errors to propagate."
+            }
+          ]
+        }
       },
       {
         "status": "ok",
         "findings": [
           {
+            "agent_type": "logic_performance",
             "severity": "high",
             "file": "case_01_order_processor.py",
-            "issue": "add_to_cart uses a mutable default argument `cart=[]`. Because the same list object is reused across all invocations when no cart is passed, mutating it in one call corrupts state for every subsequent call (items accumulate across unrelated requests).",
-            "recommendation": "Use `cart=None` as the default and create a new list inside the function, e.g. `if cart is None: cart = []` before appending."
+            "issue": "Mutable default argument `cart=[]` in `add_to_cart` creates shared state across calls, causing items to persist unintentionally between invocations.",
+            "recommendation": "Change the signature to `def add_to_cart(item, cart=None):` and inside the function initialize `cart = [] if cart is None else cart` before appending."
           },
           {
+            "agent_type": "logic_performance",
             "severity": "medium",
             "file": "case_01_order_processor.py",
-            "issue": "submit_order swallows all exceptions and returns only a generic `{'status': 'failed'}`. This discards the actual error type/message, making failures un-diagnosable, and masks programming errors (e.g., the ValueError from charge_customer when total <= 0, or KeyError if a cart item is missing 'price'/'quantity') that should probably propagate or be reported with detail.",
-            "recommendation": "Catch specific exceptions, log the error (`logger.exception(...)`), and include an error message in the returned dict so callers can distinguish business failures (e.g., non-positive total) from unexpected ones."
+            "issue": "`get_unique_skus` returns the full item dictionaries while its docstring states it should return a list of distinct SKUs.",
+            "recommendation": "Either update the docstring to reflect that the function returns unique items, or modify the function to collect and return only `item[\"sku\"]` values (e.g., `unique.append(item[\"sku\"])`)."
           },
           {
+            "agent_type": "logic_performance",
             "severity": "low",
             "file": "case_01_order_processor.py",
-            "issue": "calculate_total applies the discount based on `len(cart) > discount_threshold`, i.e., the number of distinct line items, not the total quantity ordered. The docstring says 'bulk orders' and passing a per-unit quantity suggests intent, but the threshold is compared against line count, so 11 line items of qty 1 get a discount while 2 line items of qty 100 do not.",
-            "recommendation": "Clarify the discount condition; if it should be based on total quantity, sum `item['quantity']` for the comparison instead of `len(cart)`."
+            "issue": "`get_unique_skus` uses a list (`seen`) for membership checks, resulting in O(n²) time complexity for large carts.",
+            "recommendation": "Replace `seen` with a `set` for O(1) membership tests while preserving order using the existing `unique` list."
           },
           {
+            "agent_type": "logic_performance",
+            "severity": "medium",
+            "file": "case_01_order_processor.py",
+            "issue": "`submit_order` catches a broad `Exception`, which masks underlying errors (e.g., key errors, validation failures) and makes debugging difficult.",
+            "recommendation": "Catch specific exceptions such as `ValueError` from `charge_customer` and any custom validation errors, allowing unexpected exceptions to propagate."
+          },
+          {
+            "agent_type": "logic_performance",
             "severity": "low",
             "file": "case_01_order_processor.py",
-            "issue": "get_unique_skus uses a `list` (`seen`) for membership checks, making each `in` lookup O(n) and the whole function O(n^2). For large carts this is unnecessarily slow.",
-            "recommendation": "Use a `set` for `seen` to get O(1) membership checks while keeping the `unique` list to preserve first-appearance order."
+            "issue": "`calculate_total` performs monetary arithmetic using binary floating‑point (`float`) and rounds the result, which can introduce precision errors in financial contexts.",
+            "recommendation": "Use `Decimal` from the `decimal` module for price and total calculations, and round only for display purposes."
           }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": [
-          {
-            "severity": "high",
-            "file": "case_01_order_processor.py",
-            "issue": "Mutable default argument `cart=[]` in `add_to_cart`. The list persists across calls, so items added in one invocation remain in the list for every subsequent call, silently accumulating across unrelated operations.",
-            "recommendation": "Use a `None` sentinel and create a new list inside the function: `def add_to_cart(item, cart=None):` followed by `if cart is None: cart = []`."
-          },
-          {
-            "severity": "medium",
-            "file": "case_01_order_processor.py",
-            "issue": "`get_unique_skus` uses a list (`seen`) for membership testing, making the loop O(n\u00b2) in the number of cart items. For large carts this is unnecessarily slow.",
-            "recommendation": "Use a `set` for `seen` to achieve O(1) average membership checks: `seen = set()`, and `if item[\"sku\"] not in seen: seen.add(item[\"sku\"])` while still appending to the `unique` list to preserve first-appearance order."
-          },
-          {
-            "severity": "medium",
-            "file": "case_01_order_processor.py",
-            "issue": "`submit_order` catches all exceptions and returns `{\"status\": \"failed\"}` without logging the error or propagating any detail. A failed payment (e.g., a `ValueError` from `charge_customer` when the total is zero or negative) is indistinguishable from a transient network failure, and no trace is left for debugging.",
-            "recommendation": "Log the exception before swallowing it (e.g., `logger.exception(\"Order submission failed for customer %s\", customer_id)`) and/or re-raise for unexpected error types so the caller can react appropriately."
-          },
-          {
-            "severity": "low",
-            "file": "case_01_order_processor.py",
-            "issue": "`calculate_total` uses `len(cart) > discount_threshold` where `discount_threshold` defaults to 10. The parameter is named a threshold (suggesting a price-based cutoff), but it is applied to the item count. This is misleading and the comparison uses strict `>`, so exactly 10 items receive no discount, which may be unexpected.",
-            "recommendation": "Rename the parameter to `bulk_item_count` (or similar) to reflect its actual meaning, and confirm whether the intent is `>=` or `>` for the discount boundary."
-          }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": [
-          {
-            "severity": "high",
-            "file": "case_01_order_processor.py",
-            "issue": "Mutable default argument `cart=[]` in `add_to_cart`. The default list is shared across all calls, so state from one caller persists into another (e.g., calling `add_to_cart('a')` then `add_to_cart('b')` returns `['a', 'b']`).",
-            "recommendation": "Use `def add_to_cart(item, cart=None):` and initialize `cart = []` inside the function when `cart is None`."
-          },
-          {
-            "severity": "medium",
-            "file": "case_01_order_processor.py",
-            "issue": "`calculate_total` applies the 10% discount when `len(cart) > discount_threshold`, where `len(cart)` counts distinct item rows, not the total number of units. A cart with 11 rows each having quantity 1 qualifies, but a single row with quantity 50 would not. This likely misrepresents 'bulk order' semantics.",
-            "recommendation": "Base the bulk check on total quantity: `total_qty = sum(item['quantity'] for item in cart); if total_qty > discount_threshold: ...` or document explicitly that the threshold applies to line-item count."
-          },
-          {
-            "severity": "medium",
-            "file": "case_01_order_processor.py",
-            "issue": "`get_unique_skus` uses a list (`seen`) with `in` for membership testing, giving O(n^2) time complexity for large carts. The docstring promises 'in order of first appearance', which `dict.fromkeys` or an ordered set can also achieve while retaining O(n).",
-            "recommendation": "Use a `set` for `seen` to get O(1) lookups, or use `dict.fromkeys((item['sku'] for item in cart))` and then map back to items, to achieve O(n) overall."
-          },
-          {
-            "severity": "low",
-            "file": "case_01_order_processor.py",
-            "issue": "`submit_order` catches a bare `Exception` and silently returns `{\"status\": \"failed\"}` without any logging or re-raise, making it difficult to diagnose why an order failed.",
-            "recommendation": "At minimum, call `logger.exception(...)` inside the `except` block before returning, or narrow the exception types caught and propagate specific errors upward."
-          }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": [
-          {
-            "severity": "high",
-            "file": "case_01_order_processor.py",
-            "issue": "add_to_cart uses a mutable default argument (cart=[]). The list is created once and shared across every call that omits the `cart` argument, so items accumulate between unrelated calls (global state leak).",
-            "recommendation": "Use `cart=None` as the default and create the list inside the function: `if cart is None: cart = []`."
-          },
-          {
-            "severity": "medium",
-            "file": "case_01_order_processor.py",
-            "issue": "calculate_total's discount is gated on number of items (len(cart) > discount_threshold), but the docstring describes a 'bulk order' discount which typically means based on total value/quantity, not item count. A cart with 11 distinct line items regardless of quantity/value gets the discount, contradicting the stated intent; conversely a single line item with 50 units does not.",
-            "recommendation": "Clarify the bulk definition and implement it against total quantity or total amount, e.g. `if total > discount_threshold:` or summing `item['quantity']`, and align the docstring."
-          },
-          {
-            "severity": "low",
-            "file": "case_01_order_processor.py",
-            "issue": "submit_order catches a generic Exception and silently returns {'status': 'failed'} with no logging, so a payment/charge failure is indistinguishable and untraceable.",
-            "recommendation": "Log the exception (logger.exception) inside the except block and ideally include an error reason in the returned dict for debugging."
-          },
-          {
-            "severity": "low",
-            "file": "case_01_order_processor.py",
-            "issue": "charge_customer raises ValueError if amount <= 0, but an empty cart yields a total of 0.0, causing submit_order to fail for an empty cart with an unhelpful generic failure message.",
-            "recommendation": "Validate that the cart is non-empty (e.g. in submit_order) before calling charge_customer, or handle the zero-total case explicitly."
-          }
-        ]
+        ],
+        "finding_count": 5,
+        "duration_seconds": 4.95,
+        "metrics": {
+          "true_positives": 3,
+          "false_positives": 2,
+          "false_negatives": 1,
+          "precision": 0.6,
+          "recall": 0.75,
+          "f1": 0.6667,
+          "severity_agreement": 0.6667,
+          "matched_findings": [
+            {
+              "expected": {
+                "severity": "high",
+                "category": "mutable_default_argument",
+                "description": "add_to_cart uses cart=[] as a default, shared across calls"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "high",
+                "file": "case_01_order_processor.py",
+                "issue": "Mutable default argument `cart=[]` in `add_to_cart` creates shared state across calls, causing items to persist unintentionally between invocations.",
+                "recommendation": "Change the signature to `def add_to_cart(item, cart=None):` and inside the function initialize `cart = [] if cart is None else cart` before appending."
+              },
+              "severity_match": true
+            },
+            {
+              "expected": {
+                "severity": "medium",
+                "category": "performance",
+                "description": "get_unique_skus uses list membership check -- O(n^2)"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "low",
+                "file": "case_01_order_processor.py",
+                "issue": "`get_unique_skus` uses a list (`seen`) for membership checks, resulting in O(n²) time complexity for large carts.",
+                "recommendation": "Replace `seen` with a `set` for O(1) membership tests while preserving order using the existing `unique` list."
+              },
+              "severity_match": false
+            },
+            {
+              "expected": {
+                "severity": "low",
+                "category": "correctness",
+                "description": "calculate_total accumulates float rounding error for money math"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "low",
+                "file": "case_01_order_processor.py",
+                "issue": "`calculate_total` performs monetary arithmetic using binary floating‑point (`float`) and rounds the result, which can introduce precision errors in financial contexts.",
+                "recommendation": "Use `Decimal` from the `decimal` module for price and total calculations, and round only for display purposes."
+              },
+              "severity_match": true
+            }
+          ],
+          "missed_findings": [
+            {
+              "severity": "medium",
+              "category": "error_handling",
+              "description": "submit_order catches a bare Exception, hiding real failures"
+            }
+          ],
+          "extra_findings": [
+            {
+              "agent_type": "logic_performance",
+              "severity": "medium",
+              "file": "case_01_order_processor.py",
+              "issue": "`get_unique_skus` returns the full item dictionaries while its docstring states it should return a list of distinct SKUs.",
+              "recommendation": "Either update the docstring to reflect that the function returns unique items, or modify the function to collect and return only `item[\"sku\"]` values (e.g., `unique.append(item[\"sku\"])`)."
+            },
+            {
+              "agent_type": "logic_performance",
+              "severity": "medium",
+              "file": "case_01_order_processor.py",
+              "issue": "`submit_order` catches a broad `Exception`, which masks underlying errors (e.g., key errors, validation failures) and makes debugging difficult.",
+              "recommendation": "Catch specific exceptions such as `ValueError` from `charge_customer` and any custom validation errors, allowing unexpected exceptions to propagate."
+            }
+          ]
+        }
       }
     ]
   },
@@ -176,87 +285,129 @@
         "status": "ok",
         "findings": [
           {
+            "agent_type": "logic_performance",
             "severity": "high",
             "file": "case_02_buggy_basic.py",
-            "issue": "Syntax error in `find_user`: uses single equals `=` instead of double `==` for comparison.",
-            "recommendation": "Change `if u.id = user_id:` to `if u.id == user_id:`."
+            "issue": "SyntaxError: assignment operator '=' used in conditional 'if u.id = user_id' instead of comparison operator '=='",
+            "recommendation": "Replace '=' with '==' in the if statement: 'if u.id == user_id:'"
           },
           {
+            "agent_type": "logic_performance",
             "severity": "medium",
             "file": "case_02_buggy_basic.py",
-            "issue": "`get_average` checks nothing for an empty `scores` list, causing a `ZeroDivisionError` at `total / len(scores)`.",
-            "recommendation": "Return 0 (or raise a clear error) when `scores` is empty."
+            "issue": "Potential ZeroDivisionError when 'scores' is an empty iterable; 'len(scores)' will be zero",
+            "recommendation": "Add a guard for empty input, e.g., 'if not scores: return 0' or raise a descriptive exception before performing division"
           }
-        ]
+        ],
+        "finding_count": 2,
+        "duration_seconds": 2.5,
+        "metrics": {
+          "true_positives": 2,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "severity_agreement": 1.0,
+          "matched_findings": [
+            {
+              "expected": {
+                "severity": "high",
+                "category": "syntax_error",
+                "description": "find_user uses = instead of == in the if condition"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "high",
+                "file": "case_02_buggy_basic.py",
+                "issue": "SyntaxError: assignment operator '=' used in conditional 'if u.id = user_id' instead of comparison operator '=='",
+                "recommendation": "Replace '=' with '==' in the if statement: 'if u.id == user_id:'"
+              },
+              "severity_match": true
+            },
+            {
+              "expected": {
+                "severity": "medium",
+                "category": "correctness",
+                "description": "get_average divides by len(scores) without checking for an empty list"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_02_buggy_basic.py",
+                "issue": "Potential ZeroDivisionError when 'scores' is an empty iterable; 'len(scores)' will be zero",
+                "recommendation": "Add a guard for empty input, e.g., 'if not scores: return 0' or raise a descriptive exception before performing division"
+              },
+              "severity_match": true
+            }
+          ],
+          "missed_findings": [],
+          "extra_findings": []
+        }
       },
       {
         "status": "ok",
         "findings": [
           {
+            "agent_type": "logic_performance",
             "severity": "high",
             "file": "case_02_buggy_basic.py",
-            "issue": "Syntax error: single '=' is used instead of '==' in the id comparison inside find_user. This will raise a SyntaxError at module load time and prevents the function from working at all.",
-            "recommendation": "Change `if u.id = user_id:` to `if u.id == user_id:`."
+            "issue": "Syntax error in find_user: uses assignment operator '=' instead of comparison '==' in the if statement (if u.id = user_id). This prevents the code from compiling.",
+            "recommendation": "Replace '=' with '==' to correctly compare the user's id: if u.id == user_id:"
           },
           {
+            "agent_type": "logic_performance",
             "severity": "medium",
             "file": "case_02_buggy_basic.py",
-            "issue": "get_average will raise ZeroDivisionError (or TypeError in Python 2 with empty / by zero behavior) when called with an empty list, since len(scores) is 0 and total / len(scores) attempts division by zero.",
-            "recommendation": "Add a guard at the start: `if not scores: raise ValueError(\"scores must not be empty\")` or return a sensible default such as 0."
-          },
-          {
-            "severity": "low",
-            "file": "case_02_buggy_basic.py",
-            "issue": "get_average recomputes the sum in a manual loop rather than using the built-in sum(), which is clearer and marginally faster.",
-            "recommendation": "Replace the loop with `return sum(scores) / len(scores)`."
+            "issue": "get_average does not handle an empty scores list, leading to a ZeroDivisionError when len(scores) is 0.",
+            "recommendation": "Add a guard for empty input, e.g., if not scores: return 0.0 or raise ValueError before performing the division."
           }
-        ]
-      },
-      {
-        "status": "failed"
-      },
-      {
-        "status": "ok",
-        "findings": [
-          {
-            "severity": "high",
-            "file": "case_02_buggy_basic.py",
-            "issue": "Syntax error on line 'if u.id = user_id:'. The single assignment operator '=' is used for comparison instead of the equality operator '=='. This will raise a SyntaxError and prevent the module from loading at all.",
-            "recommendation": "Change 'if u.id = user_id:' to 'if u.id == user_id:'."
-          },
-          {
-            "severity": "high",
-            "file": "case_02_buggy_basic.py",
-            "issue": "In 'get_average', calling 'len(scores)' will raise a ZeroDivisionError when an empty list (or empty iterable) is passed, because the sum is 0 and the count is 0.",
-            "recommendation": "Guard against an empty input: 'if not scores: return 0' (or raise an explicit ValueError) before computing the division, or check 'len(scores)' > 0."
-          }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": [
-          {
-            "severity": "high",
-            "file": "case_02_buggy_basic.py",
-            "line": "5",
-            "issue": "get_average raises ZeroDivisionError when given an empty list, because `len(scores)` is 0.",
-            "recommendation": "Add a guard for `scores` being empty, either raising a descriptive error or returning 0/None depending on the intended semantics of the function."
-          },
-          {
-            "severity": "high",
-            "file": "case_02_buggy_basic.py",
-            "line": "10",
-            "issue": "Uses assignment operator `=` inside an `if` statement instead of the identity/equality comparison operator. This will cause a SyntaxError or (in older contexts) an assignment rather than a comparison, meaning the function will never properly find the user.",
-            "recommendation": "Change `if u.id = user_id:` to `if u.id == user_id:` (or `is` if identity comparison is intended)."
-          },
-          {
-            "severity": "low",
-            "file": "case_02_buggy_basic.py",
-            "line": "7",
-            "issue": "find_user returns None implicitly if no user is found, which may be acceptable, but combined with the bug above, the function is effectively non-functional.",
-            "recommendation": "Once the comparison is fixed, consider adding an explicit `return None` or a more clear signal at the end of the function to document intended behavior."
-          }
-        ]
+        ],
+        "finding_count": 2,
+        "duration_seconds": 3.57,
+        "metrics": {
+          "true_positives": 2,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "severity_agreement": 1.0,
+          "matched_findings": [
+            {
+              "expected": {
+                "severity": "high",
+                "category": "syntax_error",
+                "description": "find_user uses = instead of == in the if condition"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "high",
+                "file": "case_02_buggy_basic.py",
+                "issue": "Syntax error in find_user: uses assignment operator '=' instead of comparison '==' in the if statement (if u.id = user_id). This prevents the code from compiling.",
+                "recommendation": "Replace '=' with '==' to correctly compare the user's id: if u.id == user_id:"
+              },
+              "severity_match": true
+            },
+            {
+              "expected": {
+                "severity": "medium",
+                "category": "correctness",
+                "description": "get_average divides by len(scores) without checking for an empty list"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_02_buggy_basic.py",
+                "issue": "get_average does not handle an empty scores list, leading to a ZeroDivisionError when len(scores) is 0.",
+                "recommendation": "Add a guard for empty input, e.g., if not scores: return 0.0 or raise ValueError before performing the division."
+              },
+              "severity_match": true
+            }
+          ],
+          "missed_findings": [],
+          "extra_findings": []
+        }
       }
     ]
   },
@@ -276,44 +427,131 @@
     "runs": [
       {
         "status": "ok",
-        "findings": []
-      },
-      {
-        "status": "ok",
         "findings": [
           {
+            "agent_type": "logic_performance",
             "severity": "medium",
             "file": "case_03_clean_validator.py",
-            "issue": "validate_password does not guard against None or non-str input, unlike validate_email. If `password` is None, `len(password)` raises TypeError, and a numeric (non-str) password would cause `c.isdigit()` to raise TypeError, crashing the whole validation instead of returning a clean error.",
-            "recommendation": "Add an early type/None guard at the top of validate_password: `if not isinstance(password, str) or not password: return False, 'Password must be at least 8 characters'` so the function behaves consistently with the type-checking (isinstance/None) approach already used in validate_email."
+            "issue": "The EMAIL_PATTERN regex only allows a single dot in the domain part, rejecting valid emails with subdomains (e.g., user@mail.example.com).",
+            "recommendation": "Update the regex to permit one or more subdomain components, e.g., EMAIL_PATTERN = re.compile(r\"^[\\w.+-]+@([\\w-]+\\.)+[a-zA-Z]{2,}$\") or use a standard email validation library."
+          },
+          {
+            "agent_type": "logic_performance",
+            "severity": "medium",
+            "file": "case_03_clean_validator.py",
+            "issue": "validate_password assumes 'password' is a string and calls len(password) without checking its type, causing a TypeError for None or non‑string inputs.",
+            "recommendation": "Add an early type and emptiness check similar to validate_email, e.g., if not isinstance(password, str) or not password: return False, \"Password must be a non‑empty string\"."
           }
-        ]
+        ],
+        "finding_count": 2,
+        "duration_seconds": 4.2,
+        "metrics": {
+          "true_positives": 2,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "severity_agreement": 0.5,
+          "matched_findings": [
+            {
+              "expected": {
+                "severity": "medium",
+                "category": "correctness",
+                "description": "validate_password raises TypeError on None or non-string input -- no type guard before len()/any() calls"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_03_clean_validator.py",
+                "issue": "validate_password assumes 'password' is a string and calls len(password) without checking its type, causing a TypeError for None or non‑string inputs.",
+                "recommendation": "Add an early type and emptiness check similar to validate_email, e.g., if not isinstance(password, str) or not password: return False, \"Password must be a non‑empty string\"."
+              },
+              "severity_match": true
+            },
+            {
+              "expected": {
+                "severity": "low",
+                "category": "correctness",
+                "description": "EMAIL_PATTERN only allows one dot in the domain, incorrectly rejecting valid subdomains like user@mail.example.com"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_03_clean_validator.py",
+                "issue": "The EMAIL_PATTERN regex only allows a single dot in the domain part, rejecting valid emails with subdomains (e.g., user@mail.example.com).",
+                "recommendation": "Update the regex to permit one or more subdomain components, e.g., EMAIL_PATTERN = re.compile(r\"^[\\w.+-]+@([\\w-]+\\.)+[a-zA-Z]{2,}$\") or use a standard email validation library."
+              },
+              "severity_match": false
+            }
+          ],
+          "missed_findings": [],
+          "extra_findings": []
+        }
       },
       {
         "status": "ok",
         "findings": [
           {
-            "severity": "high",
+            "agent_type": "logic_performance",
+            "severity": "medium",
             "file": "case_03_clean_validator.py",
-            "issue": "validate_password does not guard against a None or non-str `password`. `validate_signup` calls `validate_password(password)` directly with no type check, so a `None` password will raise `TypeError: object of type 'NoneType' has no len()` instead of returning a clean invalid result. This is inconsistent with `validate_email`, which explicitly handles `None`/non-str inputs via the `isinstance` guard, and with the function's contract of returning `tuple[bool, str].`",
-            "recommendation": "Mirror the guard at the top of `validate_password` so it returns `(False, \"Password is required\")` (or similar) when `password` is `None` or not a `str`, before the `len(password)` check."
-          }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": [
+            "issue": "validate_password assumes 'password' is a string; passing None or a non‑string raises a TypeError when len() is called.",
+            "recommendation": "Add an explicit type check (e.g., if not isinstance(password, str): return False, \"Password must be a string\") before length validation."
+          },
           {
-            "severity": "high",
+            "agent_type": "logic_performance",
+            "severity": "medium",
             "file": "case_03_clean_validator.py",
-            "issue": "validate_password does not guard against a None (or non-str) argument, unlike validate_email which checks isinstance. Calling validate_signup(email, None) makes len(password) raise TypeError instead of returning a validation error, crashing the signup flow for clients that omit the field.",
-            "recommendation": "Add a guard at the top of validate_password (e.g., if not isinstance(password, str): return False, \"Password is required\"); mirror the isinstance/None-check pattern used in validate_email."
+            "issue": "EMAIL_PATTERN only matches a single top‑level domain (e.g., user@example.com) and rejects valid emails with subdomains such as user@mail.example.co.uk.",
+            "recommendation": "Update the regex to allow multiple dot‑separated domain parts, e.g., r\"^[\\w.+-]+@([\\w-]+\\.)+[a-zA-Z]{2,}$\"."
           }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": []
+        ],
+        "finding_count": 2,
+        "duration_seconds": 4.02,
+        "metrics": {
+          "true_positives": 2,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "severity_agreement": 0.5,
+          "matched_findings": [
+            {
+              "expected": {
+                "severity": "medium",
+                "category": "correctness",
+                "description": "validate_password raises TypeError on None or non-string input -- no type guard before len()/any() calls"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_03_clean_validator.py",
+                "issue": "validate_password assumes 'password' is a string; passing None or a non‑string raises a TypeError when len() is called.",
+                "recommendation": "Add an explicit type check (e.g., if not isinstance(password, str): return False, \"Password must be a string\") before length validation."
+              },
+              "severity_match": true
+            },
+            {
+              "expected": {
+                "severity": "low",
+                "category": "correctness",
+                "description": "EMAIL_PATTERN only allows one dot in the domain, incorrectly rejecting valid subdomains like user@mail.example.com"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_03_clean_validator.py",
+                "issue": "EMAIL_PATTERN only matches a single top‑level domain (e.g., user@example.com) and rejects valid emails with subdomains such as user@mail.example.co.uk.",
+                "recommendation": "Update the regex to allow multiple dot‑separated domain parts, e.g., r\"^[\\w.+-]+@([\\w-]+\\.)+[a-zA-Z]{2,}$\"."
+              },
+              "severity_match": false
+            }
+          ],
+          "missed_findings": [],
+          "extra_findings": []
+        }
       }
     ]
   },
@@ -335,98 +573,144 @@
         "status": "ok",
         "findings": [
           {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "Off-by-one in paginate(): start computes page * page_size, but the docstring says pages are 1-indexed. For page=1 this yields items[20:40] instead of items[0:20], so the first page (length < page_size) is unreachable and the rest are shifted by one page.",
-            "recommendation": "Use start = (page - 1) * page_size and end = start + page_size to align with the documented 1-indexed page numbers."
-          },
-          {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "total_pages() uses integer division item_count // page_size, which under-counts whenever item_count is not an exact multiple of page_size. E.g. 21 items / 20 returns 1 instead of 2, so the last fractional page is never reachable.",
-            "recommendation": "Return (item_count + page_size - 1) // page_size (or -(-item_count // page_size)) to round up to the nearest whole page."
-          },
-          {
-            "severity": "low",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "No validation of inputs (page >= 1, page_size > 0, non-negative item_count). Negative page zero under the corrected formula would produce a negative start index, and page_size <= 0 would cause a ZeroDivisionError in total_pages.",
-            "recommendation": "Raise ValueError for page < 1 or page_size < 1 to make preconditions explicit."
-          }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": [
-          {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "Off-by-one error in paginate(): for a 1-indexed page, the start index should be (page - 1) * page_size. With the current page * page_size, page 1 starts at index 20 instead of 0, skipping the first page_size items. Example: paginate(list(range(40)), 1, 20) returns [20..39] instead of [0..19].",
-            "recommendation": "Change `start = page * page_size` to `start = (page - 1) * page_size`."
-          },
-          {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "total_pages() undercounts the number of pages because it uses integer division (floor). For an item_count that is not a multiple of page_size, the final partial page is dropped. E.g. total_pages(25, 20) returns 1 instead of 2. This also means the last page's items are inaccessible via paginate() when combined with the corrected paginate logic.",
-            "recommendation": "Use ceiling division: `return (item_count + page_size - 1) // page_size` (with a guard for item_count == 0)."
-          }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": [
-          {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "Off-by-one logic error in paginate(): for a 1-indexed page number, the correct start index should be (page - 1) * page_size. Using page * page_size skips the first page_size items on page 1 (e.g. page=1 returns items[20:40] instead of items[0:20]).",
-            "recommendation": "Change to: start = (page - 1) * page_size"
-          },
-          {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "Off-by-one logic error in total_pages(): integer division item_count // page_size undercounts when there is a remainder. For example, 21 items with page_size=20 gives 1, but 2 pages are needed.",
-            "recommendation": "Change to: return -(-item_count // page_size) or (item_count + page_size - 1) // page_size"
-          }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": [
-          {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "Off-by-one: `paginate` treats `page` as 1-indexed (per docstring) but computes `start = page * page_size`. On page 1 it skips the first 20 items; page 0 returns items[0:20]. Using 1 as expected first page shifts every page by `page_size` items.",
-            "recommendation": "Use `start = (page - 1) * page_size` (and ideally guard `page >= 1`)."
-          },
-          {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "`total_pages` uses floor division (`item_count // page_size`), which is off by one whenever `item_count` is not an exact multiple of `page_size`. E.g. 21 items with page_size 20 yields 1 instead of 2, so the last non-empty page is unreachable.",
-            "recommendation": "Use ceiling division: `(item_count + page_size - 1) // page_size` (and handle `page_size <= 0` / `item_count == 0`)."
-          }
-        ]
-      },
-      {
-        "status": "ok",
-        "findings": [
-          {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "Off-by-one error in start index. For a '1-indexed' page number, page 1 should map to start=0, but `start = page * page_size` makes page 1 map to `start=page_size`, silently skipping the first page_size items (items[0..page_size-1] are never reachable).",
-            "recommendation": "Use `start = (page - 1) * page_size` so that page 1 begins at index 0, consistent with the documented 1-indexed contract."
-          },
-          {
-            "severity": "high",
-            "file": "case_04_pagination_offby1.py",
-            "issue": "`total_pages` truncates with simple integer division, dropping a trailing partial page. e.g. item_count=40, page_size=20 -> returns 2 only when divisible, but item_count=41 -> returns 2 while there are actually 3 pages (the last containing 1 item). This under-reports pages. Note it is also inconsistent with the (intended) 1-indexed paging semantics; if `paginate` is fixed per finding #1, the last valid page number should equal `total_pages`.",
-            "recommendation": "Use ceiling division: `return (item_count + page_size - 1) // page_size` (and guard `page_size <= 0` to avoid ZeroDivisionError)."
-          },
-          {
+            "agent_type": "logic_performance",
             "severity": "medium",
             "file": "case_04_pagination_offby1.py",
-            "issue": "No validation of inputs. `page <= 0` produces an error (in `total_pages` on ZeroDivision) or a confusing negative/zero start in `paginate`. `page_size == 0` raises ZeroDivisionError in `total_pages` and yields empty slices in `paginate`. No docstring precondition is stated for these edge cases.",
-            "recommendation": "Add a guard (e.g. raise ValueError) for `page_size <= 0` and for `page < 1` in both functions to give clear, predictable behavior."
+            "issue": "The paginate function claims a 1-indexed page number but calculates start = page * page_size, causing the first page to skip the first page_size items (off‑by‑one error).",
+            "recommendation": "Adjust start calculation to (page - 1) * page_size and add validation that page is >= 1 and page_size > 0."
+          },
+          {
+            "agent_type": "logic_performance",
+            "severity": "medium",
+            "file": "case_04_pagination_offby1.py",
+            "issue": "total_pages uses floor division (item_count // page_size) which under‑counts when item_count is not an exact multiple of page_size, omitting a partial final page.",
+            "recommendation": "Return the ceiling of the division, e.g., (item_count + page_size - 1) // page_size, and validate that page_size > 0 to avoid ZeroDivisionError."
           }
-        ]
+        ],
+        "finding_count": 2,
+        "duration_seconds": 14.34,
+        "metrics": {
+          "true_positives": 2,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "severity_agreement": 0.5,
+          "matched_findings": [
+            {
+              "expected": {
+                "severity": "high",
+                "category": "off_by_one",
+                "description": "paginate treats page as 0-indexed in the caller's likely 1-indexed usage -- page=1 skips the first page_size items"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_04_pagination_offby1.py",
+                "issue": "The paginate function claims a 1-indexed page number but calculates start = page * page_size, causing the first page to skip the first page_size items (off‑by‑one error).",
+                "recommendation": "Adjust start calculation to (page - 1) * page_size and add validation that page is >= 1 and page_size > 0."
+              },
+              "severity_match": false
+            },
+            {
+              "expected": {
+                "severity": "medium",
+                "category": "correctness",
+                "description": "total_pages uses floor division, undercounting when item_count isn't an exact multiple of page_size"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_04_pagination_offby1.py",
+                "issue": "total_pages uses floor division (item_count // page_size) which under‑counts when item_count is not an exact multiple of page_size, omitting a partial final page.",
+                "recommendation": "Return the ceiling of the division, e.g., (item_count + page_size - 1) // page_size, and validate that page_size > 0 to avoid ZeroDivisionError."
+              },
+              "severity_match": true
+            }
+          ],
+          "missed_findings": [],
+          "extra_findings": []
+        }
+      },
+      {
+        "status": "ok",
+        "findings": [
+          {
+            "agent_type": "logic_performance",
+            "severity": "medium",
+            "file": "case_04_pagination_offby1.py",
+            "issue": "paginate() calculates the start index as page * page_size, but the docstring says the page number is 1-indexed. This causes an off‑by‑one error: page 1 returns items starting at index page_size instead of 0.",
+            "recommendation": "Compute start as (page - 1) * page_size and add validation that page is >= 1 (raise ValueError for non‑positive pages)."
+          },
+          {
+            "agent_type": "logic_performance",
+            "severity": "medium",
+            "file": "case_04_pagination_offby1.py",
+            "issue": "total_pages() uses floor division (item_count // page_size), which under‑counts when item_count is not an exact multiple of page_size. The function should return the ceiling of the division to represent the actual number of pages needed.",
+            "recommendation": "Return (item_count + page_size - 1) // page_size (or use math.ceil) and validate that page_size > 0, raising ValueError for invalid sizes."
+          },
+          {
+            "agent_type": "logic_performance",
+            "severity": "low",
+            "file": "case_04_pagination_offby1.py",
+            "issue": "Both functions lack input validation for negative or zero page_size and for negative item_count/page values, which could lead to surprising results or division‑by‑zero errors.",
+            "recommendation": "Add checks that page_size > 0, item_count >= 0, and raise ValueError with a clear message when the constraints are violated."
+          }
+        ],
+        "finding_count": 3,
+        "duration_seconds": 4.86,
+        "metrics": {
+          "true_positives": 2,
+          "false_positives": 1,
+          "false_negatives": 0,
+          "precision": 0.6667,
+          "recall": 1.0,
+          "f1": 0.8,
+          "severity_agreement": 0.5,
+          "matched_findings": [
+            {
+              "expected": {
+                "severity": "high",
+                "category": "off_by_one",
+                "description": "paginate treats page as 0-indexed in the caller's likely 1-indexed usage -- page=1 skips the first page_size items"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_04_pagination_offby1.py",
+                "issue": "paginate() calculates the start index as page * page_size, but the docstring says the page number is 1-indexed. This causes an off‑by‑one error: page 1 returns items starting at index page_size instead of 0.",
+                "recommendation": "Compute start as (page - 1) * page_size and add validation that page is >= 1 (raise ValueError for non‑positive pages)."
+              },
+              "severity_match": false
+            },
+            {
+              "expected": {
+                "severity": "medium",
+                "category": "correctness",
+                "description": "total_pages uses floor division, undercounting when item_count isn't an exact multiple of page_size"
+              },
+              "actual": {
+                "agent_type": "logic_performance",
+                "severity": "medium",
+                "file": "case_04_pagination_offby1.py",
+                "issue": "total_pages() uses floor division (item_count // page_size), which under‑counts when item_count is not an exact multiple of page_size. The function should return the ceiling of the division to represent the actual number of pages needed.",
+                "recommendation": "Return (item_count + page_size - 1) // page_size (or use math.ceil) and validate that page_size > 0, raising ValueError for invalid sizes."
+              },
+              "severity_match": true
+            }
+          ],
+          "missed_findings": [],
+          "extra_findings": [
+            {
+              "agent_type": "logic_performance",
+              "severity": "low",
+              "file": "case_04_pagination_offby1.py",
+              "issue": "Both functions lack input validation for negative or zero page_size and for negative item_count/page values, which could lead to surprising results or division‑by‑zero errors.",
+              "recommendation": "Add checks that page_size > 0, item_count >= 0, and raise ValueError with a clear message when the constraints are violated."
+            }
+          ]
+        }
       }
     ]
   },
@@ -435,23 +719,39 @@
     "runs": [
       {
         "status": "ok",
-        "findings": []
+        "findings": [],
+        "finding_count": 0,
+        "duration_seconds": 17.21,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "severity_agreement": null,
+          "matched_findings": [],
+          "missed_findings": [],
+          "extra_findings": []
+        }
       },
       {
         "status": "ok",
-        "findings": []
-      },
-      {
-        "status": "ok",
-        "findings": []
-      },
-      {
-        "status": "ok",
-        "findings": []
-      },
-      {
-        "status": "ok",
-        "findings": []
+        "findings": [],
+        "finding_count": 0,
+        "duration_seconds": 5.95,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "severity_agreement": null,
+          "matched_findings": [],
+          "missed_findings": [],
+          "extra_findings": []
+        }
       }
     ]
   }

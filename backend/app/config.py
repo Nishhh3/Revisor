@@ -14,15 +14,25 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://redis:6379/2"
 
     qdrant_url: str = "http://qdrant:6333"
-    qdrant_api_key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwic3ViamVjdCI6ImFwaS1rZXk6MGE5YTY0NWUtMmUzMy00NThlLTk0OTUtYzU5Y2I4OGRiMmJkIn0.cNklC95ncGn_2IvBQpmzsPj3OVUxQ48LZrouuOdVq7E"
+    qdrant_api_key: str = ""
     qdrant_collection: str = "prism_repo_index"
+    
 
     github_webhook_secret: str = ""
     github_api_token: str = ""
 
     openai_api_key: str = ""
     groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-120b"
     google_api_key: str = ""
+
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "qwen2.5:3b"
+    review_model_provider: str = "groq"
+
+    openrouter_api_key: str = ""
+    openrouter_model: str = "openrouter/free"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
 
     @field_validator("*", mode="before")
     @classmethod
