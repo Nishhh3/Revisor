@@ -41,7 +41,7 @@ MATCH_PATTERNS = {
         r"catch(?:es|ing)? all exceptions|hiding.*exception|"
         r"masks?.*(?:underlying )?errors?|suppresses?.*errors?|"
         r"exception details",
-        r"float(?:ing.point)?|decimal|rounding error|monetary precision|money math",
+        r"float|decimal|rounding|monetary precision|money math|financial precision|currency precision",
     ],
     "case_02_buggy_basic.py": [
         r"assignment operator|syntax error|instead of.*==|instead of.*comparison",
