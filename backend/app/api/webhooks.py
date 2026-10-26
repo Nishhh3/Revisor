@@ -11,6 +11,8 @@ from app.output.pr_commenter import post_findings_comment
 from app.models.review_store import save_review
 from app.agents.security_agent import SecurityAgent
 from app.agents.standards_agent import StandardsAgent
+from app.agents.base import AgentFinding
+from app.agents.moderator import moderate
 
 logger = logging.getLogger("prism.webhooks")
 router = APIRouter()
@@ -110,7 +112,34 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
             )
 
         # Combine results for storage and GitHub comment
-        findings = logic_findings + security_findings + standards_findings
+        raw_findings = logic_findings + security_findings + standards_findings
+
+        agent_findings = [
+            AgentFinding(
+                agent_name=str(f.get("agent_type", f.get("category", "logic_performance"))),
+                severity=str(f.get("severity", "low")).lower(),
+                message=str(f.get("issue", "")),
+                file=f.get("file"),
+                line=f.get("line"),
+                evidence=f.get("evidence", []) if isinstance(f.get("evidence", []), list) else [],
+            )
+            for f in raw_findings
+        ]
+
+        moderated_findings = moderate(agent_findings)
+
+        findings = [
+            {
+                "agent_type": f.agent_name,
+                "severity": f.severity,
+                "file": f.file,
+                "line": f.line,
+                "issue": f.message,
+                "recommendation": "Review the finding and apply an appropriate fix.",
+                "evidence": f.evidence,
+            }
+            for f in moderated_findings
+        ]
 
         for finding in findings:
             logger.info(
