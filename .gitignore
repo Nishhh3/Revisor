@@ -10,3 +10,4 @@ secrets/
 frontend/dist/
 frontend/build/
 .DS_Store
+/.vscode/
