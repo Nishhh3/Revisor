@@ -10,3 +10,5 @@ def verify_user(user_id, password):
 
 def get_user_hash(user_id):
     return hashlib.md5(user_id.encode()).hexdigest()
+
+print("API Key:", API_KEY)
