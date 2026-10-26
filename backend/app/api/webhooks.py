@@ -13,6 +13,7 @@ from app.agents.security_agent import SecurityAgent
 from app.agents.standards_agent import StandardsAgent
 from app.agents.base import AgentFinding
 from app.agents.moderator import moderate
+from app.agents.persona_agent import PersonaAgent
 
 logger = logging.getLogger("prism.webhooks")
 router = APIRouter()
@@ -127,6 +128,11 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
         ]
 
         moderated_findings = moderate(agent_findings)
+
+        moderated_findings = PersonaAgent.adapt(
+        moderated_findings,
+        experience_level="mid",
+        )
 
         findings = [
             {
