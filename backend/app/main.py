@@ -18,15 +18,17 @@ app = FastAPI(
 )
 
 app.add_middleware(
-       CORSMiddleware,
-       allow_origins=["https://revisor-quj0.onrender.com/", "http://localhost:3000"],
-       allow_methods=["*"],
-       allow_headers=["*"],
-   )
+    CORSMiddleware,
+    allow_origins=[
+        "https://revisor-quj0.onrender.com",
+        "http://localhost:3000",
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(webhooks_router, prefix="/webhooks", tags=["webhooks"])
 app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
-app.include_router(dashboard_router)
 app.include_router(analytics_router)
 
 @app.get("/health")
