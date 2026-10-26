@@ -10,6 +10,7 @@ from app.agents.logic_performance_agent import review_logic_performance
 from app.output.pr_commenter import post_findings_comment
 from app.models.review_store import save_review
 from app.agents.security_agent import SecurityAgent
+from app.agents.standards_agent import StandardsAgent
 
 logger = logging.getLogger("prism.webhooks")
 router = APIRouter()
@@ -34,11 +35,12 @@ def verify_signature(payload_body: bytes, signature_header: str | None) -> None:
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
 
+
 def run_review(repo_full_name: str, pr_number: int) -> None:
-    """Runs after the webhook response is sent. A plain `def`, so FastAPI
-    executes it in a worker thread and the event loop stays free."""
+    """Run all review agents after the webhook response is sent."""
     try:
         pr_context = fetch_pr_context(repo_full_name, pr_number)
+
         logger.info(
             "Fetched PR context: title=%r files=%d diff_chars=%d",
             pr_context.title,
@@ -46,6 +48,7 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
             len(pr_context.diff),
         )
 
+        # 1. Logic and Performance Agent
         logic_findings = review_logic_performance(pr_context)
 
         if logic_findings is None:
@@ -54,9 +57,12 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
             )
             return
 
+        # 2. Security Agent
         security_findings = []
+
         try:
             security_results = SecurityAgent().review(pr_context)
+
             security_findings = [
                 {
                     "agent_type": "security",
@@ -65,8 +71,8 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
                     "line": finding.line,
                     "issue": finding.message,
                     "recommendation": (
-                        "Investigate the reported security issue and apply "
-                        "an appropriate fix."
+                        "Investigate the reported security issue "
+                        "and apply an appropriate fix."
                     ),
                     "evidence": finding.evidence,
                 }
@@ -74,22 +80,62 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
             ]
         except Exception:
             logger.exception(
-                "Security Agent failed; continuing with Logic/Performance findings"
+                "Security Agent failed; continuing with other findings"
             )
 
-        findings = logic_findings + security_findings
+        # 3. Standards Agent
+        standards_findings = []
 
-        for f in findings:
-            logger.info("Finding: [%s] %s -- %s", f.get("severity"), f.get("file"), f.get("issue"))
+        try:
+            standards_results = StandardsAgent().review(pr_context)
+
+            standards_findings = [
+                {
+                    "agent_type": "standards",
+                    "severity": finding.severity,
+                    "file": finding.file,
+                    "line": finding.line,
+                    "issue": finding.message,
+                    "recommendation": (
+                        "Improve the code according to the identified "
+                        "maintainability issue."
+                    ),
+                    "evidence": finding.evidence,
+                }
+                for finding in standards_results
+            ]
+        except Exception:
+            logger.exception(
+                "Standards Agent failed; continuing with other findings"
+            )
+
+        # Combine results for storage and GitHub comment
+        findings = logic_findings + security_findings + standards_findings
+
+        for finding in findings:
+            logger.info(
+                "Finding: [%s] %s -- %s",
+                finding.get("severity"),
+                finding.get("file"),
+                finding.get("issue"),
+            )
 
         review_id = save_review(
-            repo_full_name, pr_number, pr_context.title, pr_context.pr_author, findings
+            repo_full_name,
+            pr_number,
+            pr_context.title,
+            pr_context.pr_author,
+            findings,
         )
         logger.info("Saved review %s to database", review_id)
 
         post_findings_comment(repo_full_name, pr_number, findings)
+
     except Exception:
-        logger.exception("Review failed for %s PR #%s", repo_full_name, pr_number)
+        logger.exception(
+            "Review failed for %s PR #%s", repo_full_name, pr_number
+        )
+
 
 
 @router.post("/github")
