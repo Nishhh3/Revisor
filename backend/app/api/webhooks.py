@@ -9,6 +9,7 @@ from app.ingestion.pr_fetcher import fetch_pr_context
 from app.agents.logic_performance_agent import review_logic_performance
 from app.output.pr_commenter import post_findings_comment
 from app.models.review_store import save_review
+from app.agents.security_agent import SecurityAgent
 
 logger = logging.getLogger("prism.webhooks")
 router = APIRouter()
@@ -45,10 +46,38 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
             len(pr_context.diff),
         )
 
-        findings = review_logic_performance(pr_context)
-        if findings is None:
-            logger.error("Agent call failed -- skipping comment post, this is not a genuine clean review")
+        logic_findings = review_logic_performance(pr_context)
+
+        if logic_findings is None:
+            logger.error(
+                "Logic/Performance agent failed; skipping review publication"
+            )
             return
+
+        security_findings = []
+        try:
+            security_results = SecurityAgent().review(pr_context)
+            security_findings = [
+                {
+                    "agent_type": "security",
+                    "severity": finding.severity,
+                    "file": finding.file,
+                    "line": finding.line,
+                    "issue": finding.message,
+                    "recommendation": (
+                        "Investigate the reported security issue and apply "
+                        "an appropriate fix."
+                    ),
+                    "evidence": finding.evidence,
+                }
+                for finding in security_results
+            ]
+        except Exception:
+            logger.exception(
+                "Security Agent failed; continuing with Logic/Performance findings"
+            )
+
+        findings = logic_findings + security_findings
 
         for f in findings:
             logger.info("Finding: [%s] %s -- %s", f.get("severity"), f.get("file"), f.get("issue"))
