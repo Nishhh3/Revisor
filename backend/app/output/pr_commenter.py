@@ -24,7 +24,7 @@ def format_findings_comment(findings: list[dict]) -> str:
     if not findings:
         return "**PRISM Review**\n\nNo logic or performance issues found in this PR. ✅"
 
-    lines = ["**PRISM Review** — Logic & Performance\n"]
+    lines = ["**REVISOR — Multi-Agent Code Review**\n"]
     for f in findings:
         emoji = SEVERITY_EMOJI.get(f.get("severity", "low"), "⚪")
         lines.append(
