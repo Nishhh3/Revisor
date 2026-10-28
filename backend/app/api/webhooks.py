@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import logging
+import time
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
 
@@ -36,7 +37,6 @@ def verify_signature(payload_body: bytes, signature_header: str | None) -> None:
 
     if not hmac.compare_digest(expected, signature_header):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
-
 
 
 def generate_recommendation(finding: AgentFinding) -> str:
@@ -104,7 +104,6 @@ def generate_recommendation(finding: AgentFinding) -> str:
     )
 
 
-
 def run_review(repo_full_name: str, pr_number: int) -> None:
     """Run all review agents after the webhook response is sent."""
     try:
@@ -117,8 +116,12 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
             len(pr_context.diff),
         )
 
+        agent_runs: list[dict] = []
+
         # 1. Logic and Performance Agent
+        t0 = time.perf_counter()
         logic_findings = review_logic_performance(pr_context)
+        logic_ms = int((time.perf_counter() - t0) * 1000)
 
         if logic_findings is None:
             logger.error(
@@ -126,11 +129,23 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
             )
             return
 
+        agent_runs.append({
+            "agent_name": "logic_performance",
+            "status": "ok",
+            "duration_ms": logic_ms,
+            "findings_raw": len(logic_findings),
+            "findings_kept": len(logic_findings),
+        })
+
         # 2. Security Agent
         security_findings = []
+        security_status = "ok"
+        security_agent = None
+        t0 = time.perf_counter()
 
         try:
-            security_results = SecurityAgent().review(pr_context)
+            security_agent = SecurityAgent()
+            security_results = security_agent.review(pr_context)
 
             security_findings = [
                 {
@@ -148,15 +163,28 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
                 for finding in security_results
             ]
         except Exception:
+            security_status = "error"
             logger.exception(
                 "Security Agent failed; continuing with other findings"
             )
 
+        agent_runs.append({
+            "agent_name": "security",
+            "status": security_status,
+            "duration_ms": int((time.perf_counter() - t0) * 1000),
+            "findings_raw": getattr(security_agent, "raw_count", len(security_findings)),
+            "findings_kept": len(security_findings),
+        })
+
         # 3. Standards Agent
         standards_findings = []
+        standards_status = "ok"
+        standards_agent = None
+        t0 = time.perf_counter()
 
         try:
-            standards_results = StandardsAgent().review(pr_context)
+            standards_agent = StandardsAgent()
+            standards_results = standards_agent.review(pr_context)
 
             standards_findings = [
                 {
@@ -174,9 +202,18 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
                 for finding in standards_results
             ]
         except Exception:
+            standards_status = "error"
             logger.exception(
                 "Standards Agent failed; continuing with other findings"
             )
+
+        agent_runs.append({
+            "agent_name": "standards",
+            "status": standards_status,
+            "duration_ms": int((time.perf_counter() - t0) * 1000),
+            "findings_raw": getattr(standards_agent, "raw_count", len(standards_findings)),
+            "findings_kept": len(standards_findings),
+        })
 
         # Combine results for storage and GitHub comment
         raw_findings = logic_findings + security_findings + standards_findings
@@ -196,10 +233,9 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
         moderated_findings = moderate(agent_findings)
 
         moderated_findings = PersonaAgent.adapt(
-        moderated_findings,
-        experience_level="mid",
+            moderated_findings,
+            experience_level="mid",
         )
-
 
         findings = [
             {
@@ -213,7 +249,6 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
             }
             for f in moderated_findings
         ]
-
 
         for finding in findings:
             logger.info(
@@ -229,6 +264,7 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
             pr_context.title,
             pr_context.pr_author,
             findings,
+            agent_runs=agent_runs,
         )
         logger.info("Saved review %s to database", review_id)
 
@@ -238,7 +274,6 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
         logger.exception(
             "Review failed for %s PR #%s", repo_full_name, pr_number
         )
-
 
 
 @router.post("/github")

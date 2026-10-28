@@ -91,6 +91,7 @@ class StandardsAgent(ReviewAgent):
     name = "standards"
 
     def review(self, pr: PRContext) -> list[AgentFinding]:
+        self.raw_count = 0
         if not pr.diff.strip() or not pr.changed_files:
             return []
 
@@ -118,6 +119,7 @@ class StandardsAgent(ReviewAgent):
         findings = parsed.get("findings", [])
         if not isinstance(findings, list):
             return []
+            self.raw_count = len(findings)
 
         allowed_severities = {"medium", "low", "nitpick"}
         changed_files = set(pr.changed_files)
