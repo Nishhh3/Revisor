@@ -1,8 +1,8 @@
-
 """Standards and maintainability review agent for REVISOR."""
 
 import json
 import logging
+import re
 
 from app.agents.base import AgentFinding, ReviewAgent
 from app.agents.model_provider import generate
@@ -44,6 +44,43 @@ Return only valid JSON:
 }
 """
 
+NOISE_PATTERNS = [
+    re.compile(r"\bdocstring", re.I),
+    re.compile(r"\btype (hint|annotation)s?\b", re.I),
+    re.compile(r"\bmissing (a )?(type|return)\b", re.I),
+    re.compile(r"\bcomment\b.*\b(unrelated|not attached|standalone|lacks?|missing)\b", re.I),
+    re.compile(r"\b(lacks?|missing|without)\b.*\bcomment\b", re.I),
+]
+
+
+def _is_noise(message: str) -> bool:
+    return any(p.search(message) for p in NOISE_PATTERNS)
+
+
+def _added_lines(diff: str) -> dict[str, set[int]]:
+    """Map file path -> set of added line numbers (new-file numbering)."""
+    result: dict[str, set[int]] = {}
+    current = None
+    new_line = 0
+    for raw in diff.splitlines():
+        if raw.startswith("+++ "):
+            path = raw[4:].strip()
+            current = path[2:] if path.startswith("b/") else path
+            result.setdefault(current, set())
+        elif raw.startswith("@@"):
+            m = re.search(r"\+(\d+)", raw)
+            new_line = int(m.group(1)) if m else 0
+        elif current is None or raw.startswith("---"):
+            continue
+        elif raw.startswith("+"):
+            result[current].add(new_line)
+            new_line += 1
+        elif raw.startswith("-"):
+            continue
+        else:
+            new_line += 1
+    return result
+
 
 class StandardsAgent(ReviewAgent):
     name = "standards"
@@ -79,6 +116,7 @@ class StandardsAgent(ReviewAgent):
 
         allowed_severities = {"medium", "low", "nitpick"}
         changed_files = set(pr.changed_files)
+        added = _added_lines(pr.diff)
         results = []
 
         for item in findings:
@@ -95,10 +133,14 @@ class StandardsAgent(ReviewAgent):
                 continue
             if severity not in allowed_severities:
                 severity = "low"
+            if _is_noise(message):
+                continue
 
             line = item.get("line")
-            if not isinstance(line, int) or line < 1:
-                line = None
+            if not isinstance(line, int) or line not in added.get(file_path, set()):
+                continue
+            if severity == "nitpick":
+                severity = "low"
 
             evidence = item.get("evidence", [])
             if not isinstance(evidence, list):
