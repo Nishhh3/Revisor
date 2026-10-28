@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import pytest
 
 from app.agents import standards_agent as sa
 
@@ -55,3 +56,16 @@ def test_valid_finding_kept(monkeypatch):
          "message": "Duplicated logic should be consolidated", "evidence": ["a"]},
     ])
     assert len(out) == 1 and out[0].severity == "medium" and out[0].line == 2
+
+@pytest.mark.parametrize("msg", [
+    "Functions lack docstrings or type hints, reducing readability",
+    "Placeholder comment is not accompanied by implementation, suggesting dead or incomplete code",
+    "File does not end with a newline character",
+    "Use of MD5 for hashing may be inappropriate; consider a stronger hash",
+])
+def test_known_noise_dropped(msg):
+    assert sa._is_noise(msg)
+
+
+def test_real_finding_not_noise():
+    assert not sa._is_noise("Duplicated validation logic in two handlers should be consolidated")

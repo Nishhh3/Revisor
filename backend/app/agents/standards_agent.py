@@ -45,11 +45,16 @@ Return only valid JSON:
 """
 
 NOISE_PATTERNS = [
-    re.compile(r"\bdocstring", re.I),
-    re.compile(r"\btype (hint|annotation)s?\b", re.I),
+    re.compile(r"\bdocstrings?\b", re.I),
+    re.compile(r"\btype (hints?|annotations?)\b", re.I),
     re.compile(r"\bmissing (a )?(type|return)\b", re.I),
-    re.compile(r"\bcomment\b.*\b(unrelated|not attached|standalone|lacks?|missing)\b", re.I),
+    re.compile(r"\bcomment\b.*\b(unrelated|not attached|standalone|lacks?|missing|placeholder)\b", re.I),
     re.compile(r"\b(lacks?|missing|without)\b.*\bcomment\b", re.I),
+    re.compile(r"\bplaceholder\b.*\b(dead|incomplete)\b", re.I),
+    re.compile(r"\b(end|ends)\b.*\bnewline\b", re.I),
+    re.compile(r"\bnewline\b.*\bend of file\b", re.I),
+    re.compile(r"\btrailing (whitespace|newline)\b", re.I),
+    re.compile(r"\b(md5|sha-?1|hash(ing)?)\b.*\b(stronger|inappropriate|insecure|weak)\b", re.I),
 ]
 
 
