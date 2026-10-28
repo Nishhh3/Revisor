@@ -39,6 +39,72 @@ def verify_signature(payload_body: bytes, signature_header: str | None) -> None:
 
 
 
+def generate_recommendation(finding: AgentFinding) -> str:
+    """Generate a targeted remediation suggestion from a finding."""
+    text = finding.message.lower()
+
+    if any(term in text for term in (
+        "hardcoded api key", "hardcoded credential",
+        "hardcoded secret", "hard coded secret",
+        "secret credential", "exposes a secret",
+    )):
+        return (
+            "Remove the hardcoded credential, load it from an environment "
+            "variable or secret manager, and rotate it if it was exposed."
+        )
+
+    if "md5" in text or "sha1" in text or "weak hash" in text:
+        return (
+            "Avoid MD5 or SHA-1 for security-sensitive hashing. Choose a "
+            "modern algorithm appropriate to the use case; use a dedicated "
+            "password-hashing algorithm for passwords."
+        )
+
+    if any(term in text for term in (
+        "password", "verify_user", "credential validation",
+    )) and any(term in text for term in (
+        "truthy", "does not actually verify", "ignores the user_id",
+        "authentication",
+    )):
+        return (
+            "Verify the supplied credentials against the trusted user record. "
+            "Reject invalid credentials rather than checking only whether "
+            "the password value is non-empty."
+        )
+
+    if any(term in text for term in (
+        "none", "non-null", "non‑null", "non-string", "attributeerror",
+        "input validation",
+    )):
+        return (
+            "Validate the input type and handle None or invalid values "
+            "explicitly before calling methods on the input."
+        )
+
+    if any(term in text for term in (
+        "import time", "module import", "side effect",
+    )):
+        return (
+            "Remove the import-time side effect or move the operation into "
+            "a function. Use an if __name__ == '__main__' guard for "
+            "code intended to run only when the module is executed directly."
+        )
+
+    if any(term in text for term in (
+        "docstring", "type hint", "type annotation", "maintainability",
+    )):
+        return (
+            "Add type annotations to function parameters and return values, "
+            "and document the function's purpose, inputs, and return value."
+        )
+
+    return (
+        "Inspect the cited code and evidence, then apply a fix that addresses "
+        "the specific behavior described in this finding."
+    )
+
+
+
 def run_review(repo_full_name: str, pr_number: int) -> None:
     """Run all review agents after the webhook response is sent."""
     try:
@@ -134,6 +200,7 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
         experience_level="mid",
         )
 
+
         findings = [
             {
                 "agent_type": f.agent_name,
@@ -141,11 +208,12 @@ def run_review(repo_full_name: str, pr_number: int) -> None:
                 "file": f.file,
                 "line": f.line,
                 "issue": f.message,
-                "recommendation": "Review the finding and apply an appropriate fix.",
+                "recommendation": generate_recommendation(f),
                 "evidence": f.evidence,
             }
             for f in moderated_findings
         ]
+
 
         for finding in findings:
             logger.info(

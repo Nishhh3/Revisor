@@ -125,6 +125,12 @@ class SecurityAgent(ReviewAgent):
             logger.exception("Security triage failed")
             return []
 
+
+        candidate_locations = {
+        (candidate["file"], candidate["line"])
+        for candidate in candidates
+        }
+        
         results = []
         for item in parsed.get("findings", []):
             if not isinstance(item, dict):
@@ -142,6 +148,15 @@ class SecurityAgent(ReviewAgent):
             line_number = item.get("line")
             if not isinstance(line_number, int) or line_number < 1:
                 line_number = None
+
+            if (file_path, line_number) not in candidate_locations:
+                logger.warning(
+                    "Ignoring security finding without a matching scanner candidate: "
+                    "file=%s line=%s",
+                    file_path,
+                    line_number,
+                )
+                continue
 
             evidence = item.get("evidence", [])
             if not isinstance(evidence, list):
